@@ -1,0 +1,10 @@
+{
+  "names": {
+    "0": "drowsy",
+    "1": "not_drowsy"
+  },
+  "imgsz": 224,
+  "source_run": "runs/classify/drowsiness_yolov8n_cls",
+  "test_accuracy": 0.8846,
+  "test_roc_auc": 0.9397
+}

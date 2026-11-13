@@ -1,0 +1,34 @@
+# Python / environment
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.env
+
+# Datasets (rebuilt by scripts/01_prepare_dataset.sh)
+datasets/
+
+# Django runtime data (local database, uploaded images, live-monitor snapshots, collectstatic output)
+drowsiness_detection_webapp/db.sqlite3
+drowsiness_detection_webapp/media/
+drowsiness_detection_webapp/staticfiles/
+
+# Training artefacts that are large or regenerated
+training/yolov8n-cls.pt
+runs/classify/*/weights/
+runs/landmark/*.npz
+runs/logs/
+
+# Legacy distracted-driver project: keep only its code
+legacy_distracted_driver/Dataset/
+legacy_distracted_driver/yolo_dataset/
+legacy_distracted_driver/runs/
+legacy_distracted_driver/old_webapp_data/
+legacy_distracted_driver/*.pt
+
+# Editors / OS / Office lock files
+.vscode/
+.idea/
+.DS_Store
+~$*
+.~lock.*

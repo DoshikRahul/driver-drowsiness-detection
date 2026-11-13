@@ -1,0 +1,7 @@
+{
+  "weight_cnn": 0.8,
+  "cnn_input": "full",
+  "threshold": 0.5,
+  "selected_on": "validation ROC-AUC",
+  "test_accuracy": 0.8859
+}
