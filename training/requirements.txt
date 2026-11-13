@@ -1,0 +1,10 @@
+# Extra packages needed only to re-run the training / evaluation runs.
+# Install the web-app requirements first, then:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+#   pip install -r training/requirements.txt
+-r ../drowsiness_detection_webapp/requirements.txt
+ultralytics>=8.3
+pyarrow>=14
+matplotlib>=3.7
+onnx>=1.15
+onnxslim>=0.1
