@@ -1,0 +1,171 @@
+{% extends 'detector/base.html' %}
+
+{% block title %}Result - Driver Drowsiness Detection{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="hero text-center mb-4">
+                <div class="hero-icon mx-auto mb-3"><i class="fas fa-{{ analysis.icon }}"></i></div>
+                <h1 class="fw-bold mb-2">{{ analysis.state_name }}</h1>
+                <p class="lead mb-3" style="opacity:.9">
+                    {% if not analysis.face_detected %}
+                        We couldn't find a face in this image.
+                    {% elif analysis.is_drowsy %}
+                        Signs of drowsiness detected
+                    {% else %}
+                        The driver appears alert
+                    {% endif %}
+                </p>
+                <span class="badge bg-{{ analysis.alert_class }} fs-6 px-3 py-2">
+                    {{ analysis.status_label }} · Risk {{ analysis.risk_level }}
+                </span>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="card card-soft h-100">
+                        <div class="card-header bg-white border-0 pt-3 d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="fas fa-image text-primary"></i> Image</h5>
+                            {% if analysis.annotated_image %}
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button class="btn btn-outline-secondary active" data-img="{{ analysis.annotated_image.url }}">Annotated</button>
+                                <button class="btn btn-outline-secondary" data-img="{{ analysis.uploaded_image.url }}">Original</button>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="card-body text-center">
+                            <img id="resultImage"
+                                 src="{% if analysis.annotated_image %}{{ analysis.annotated_image.url }}{% else %}{{ analysis.uploaded_image.url }}{% endif %}"
+                                 alt="Driver image" class="img-fluid rounded mb-3" style="max-height:340px;">
+                            <p class="mb-1">
+                                Confidence: <strong>{{ analysis.confidence|floatformat:2 }}</strong>
+                                · Drowsiness score: <strong>{{ analysis.drowsiness_percent }}%</strong>
+                            </p>
+                            <small class="text-muted"><i class="fas fa-clock"></i> {{ analysis.created_at|date:"M d, Y H:i" }} · {{ analysis.get_source_display }}</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="card card-soft h-100">
+                        <div class="card-header bg-white border-0 pt-3">
+                            <h5 class="mb-0"><i class="fas fa-chart-bar text-info"></i> Fatigue Indicators</h5>
+                        </div>
+                        <div class="card-body">
+                            <div style="height:260px"><canvas id="scoreChart"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if analysis.learned %}
+            <div class="card card-soft mt-4">
+                <div class="card-header bg-white border-0 pt-3">
+                    <h5 class="mb-0"><i class="fas fa-graduation-cap text-primary"></i> Trained model verdict</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Probability the driver is drowsy</span><strong>{{ analysis.model_percent }}%</strong>
+                    </div>
+                    <div class="progress mb-3" style="height:14px">
+                        <div class="progress-bar bg-{% if analysis.is_drowsy %}danger{% else %}success{% endif %}" style="width: {{ analysis.model_percent }}%"></div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6"><div class="metric-tile"><div class="val">{% if analysis.learned.p_cnn is not None %}{% widthratio analysis.learned.p_cnn 1 100 %}%{% else %}–{% endif %}</div><div class="lbl">CNN (face image)</div></div></div>
+                        <div class="col-md-6"><div class="metric-tile"><div class="val">{% if analysis.learned.p_landmark is not None %}{% widthratio analysis.learned.p_landmark 1 100 %}%{% else %}–{% endif %}</div><div class="lbl">Landmark classifier</div></div></div>
+                    </div>
+                    <small class="text-muted d-block mt-2">Drowsy when the combined probability is ≥ {% widthratio analysis.learned.threshold 1 100 %}%. See <a href="{% url 'model_info' %}">How It Works</a> for test accuracy.</small>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if metrics %}
+            <div class="card card-soft mt-4">
+                <div class="card-header bg-white border-0 pt-3">
+                    <h5 class="mb-0"><i class="fas fa-ruler-combined text-success"></i> Measurements</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-6 col-md-4 col-lg-2"><div class="metric-tile"><div class="val {% if metrics.ear < 0.21 %}text-danger{% endif %}">{{ metrics.ear|floatformat:3 }}</div><div class="lbl">EAR (closed &lt; 0.21)</div></div></div>
+                        <div class="col-6 col-md-4 col-lg-2"><div class="metric-tile"><div class="val">{{ metrics.ear_left|floatformat:3 }} / {{ metrics.ear_right|floatformat:3 }}</div><div class="lbl">EAR left / right</div></div></div>
+                        <div class="col-6 col-md-4 col-lg-2"><div class="metric-tile"><div class="val {% if metrics.mar > 0.6 %}text-warning{% endif %}">{{ metrics.mar|floatformat:3 }}</div><div class="lbl">MAR (yawn &gt; 0.60)</div></div></div>
+                        <div class="col-6 col-md-4 col-lg-2"><div class="metric-tile"><div class="val {% if metrics.pitch > 20 %}text-danger{% endif %}">{{ metrics.pitch|floatformat:1 }}°</div><div class="lbl">Head pitch (+ down)</div></div></div>
+                        <div class="col-6 col-md-4 col-lg-2"><div class="metric-tile"><div class="val">{{ metrics.blink|floatformat:2 }}</div><div class="lbl">Blink score</div></div></div>
+                        <div class="col-6 col-md-4 col-lg-2"><div class="metric-tile"><div class="val">{{ metrics.jaw_open|floatformat:2 }}</div><div class="lbl">Jaw-open score</div></div></div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="mt-4">
+                {% if not analysis.face_detected %}
+                <div class="alert alert-secondary">
+                    <h5 class="alert-heading"><i class="fas fa-user-slash"></i> No face found</h5>
+                    <p class="mb-0">Try a clearer, front-facing photo with the driver's eyes visible, or use the live monitor.</p>
+                </div>
+                {% elif analysis.is_drowsy %}
+                <div class="alert alert-{{ analysis.alert_class }}">
+                    <h5 class="alert-heading"><i class="fas fa-triangle-exclamation"></i> Drowsiness Alert</h5>
+                    <p>
+                        {% if analysis.state == 1 %}The driver's eyes appear to be closed. If this lasts more than a moment, it may be a microsleep.
+                        {% elif analysis.state == 2 %}The driver is yawning, an early sign of fatigue.
+                        {% elif analysis.state == 3 %}The driver's head is tilted forward, which can mean they are nodding off.
+                        {% elif analysis.state == 5 %}No single sign (closed eyes, yawn, nodding) crossed its threshold, but the trained model recognises a fatigued face.{% endif %}
+                        A fatigued driver should pull over somewhere safe and rest.
+                    </p>
+                    <hr>
+                    <small><i class="fas fa-info-circle"></i> A single photo can't tell a normal blink from sleep. Use the live monitor for duration-based detection.</small>
+                </div>
+                {% else %}
+                <div class="alert alert-success">
+                    <h5 class="alert-heading"><i class="fas fa-check-circle"></i> Driver Alert</h5>
+                    <p class="mb-0">Eyes are open, no yawning and the head is upright. Keep it up, and take a break every 2 hours on long drives.</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="text-center mt-4 d-flex flex-wrap gap-2 justify-content-center">
+                <a href="{% url 'upload_image' %}" class="btn btn-primary"><i class="fas fa-upload"></i> Analyze Another</a>
+                <a href="{% url 'live_monitor' %}" class="btn btn-outline-danger"><i class="fas fa-video"></i> Live Monitor</a>
+                <a href="{% url 'download_report' analysis.id %}" class="btn btn-outline-secondary"><i class="fas fa-download"></i> Download Report</a>
+                <a href="{% url 'history' %}" class="btn btn-outline-info"><i class="fas fa-history"></i> History</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ chart_data|json_script:"chart-data" }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[data-img]').forEach(btn => btn.addEventListener('click', () => {
+        document.getElementById('resultImage').src = btn.dataset.img;
+        document.querySelectorAll('[data-img]').forEach(b => b.classList.toggle('active', b === btn));
+    }));
+
+    const chartData = JSON.parse(document.getElementById('chart-data').textContent);
+    const colors = ['#dc3545', '#ffc107', '#fd7e14', '#28a745'];
+    new Chart(document.getElementById('scoreChart'), {
+        type: 'bar',
+        data: {
+            labels: chartData.labels,
+            datasets: [{
+                data: chartData.data.map(v => +(v * 100).toFixed(1)),
+                backgroundColor: colors,
+                borderRadius: 6,
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.parsed.x + '%' } } },
+            scales: { x: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } }
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,414 @@
+{% extends 'detector/base.html' %}
+
+{% block title %}Live Monitor - Driver Drowsiness Detection{% endblock %}
+
+{% block extra_css %}
+<style>
+    .cam-wrap { position: relative; background: #0b1220; border-radius: 16px; overflow: hidden; aspect-ratio: 4 / 3; }
+    .cam-wrap video, .cam-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+    .cam-wrap.alarm { box-shadow: 0 0 0 6px #dc3545; animation: flash .5s steps(2) infinite; }
+    @keyframes flash { 50% { box-shadow: 0 0 0 6px transparent; } }
+    .cam-placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #8899aa; text-align: center; padding: 1rem; }
+    .status-banner { border-radius: 14px; padding: 1rem 1.25rem; color: #fff; font-weight: 600; display: flex; align-items: center; gap: .75rem; transition: background .2s; }
+    .status-banner i { font-size: 1.6rem; }
+    .st-idle { background: #6c757d; } .st-ok { background: #28a745; } .st-warn { background: #e0a800; } .st-danger { background: #dc3545; } .st-calib { background: #17a2b8; }
+    .live-tile { background: #f8f9fa; border-radius: 12px; padding: .75rem; text-align: center; }
+    .live-tile .val { font-size: 1.35rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .live-tile .lbl { font-size: .75rem; color: #6c757d; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    {% csrf_token %}
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <h1 class="h3 fw-bold mb-0"><i class="fas fa-video" style="color:#243b55"></i> Live Drowsiness Monitor</h1>
+        <div class="d-flex gap-2">
+            <button id="muteBtn" class="btn btn-outline-secondary" title="Mute alarm"><i class="fas fa-volume-high"></i></button>
+            <button id="startBtn" class="btn btn-accent"><i class="fas fa-play me-1"></i> Start</button>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div id="camWrap" class="cam-wrap">
+                <video id="video" playsinline muted></video>
+                <canvas id="overlay"></canvas>
+                <div id="placeholder" class="cam-placeholder">
+                    <i class="fas fa-camera fa-3x mb-3"></i>
+                    <div>Press <strong>Start</strong> and allow camera access.<br>
+                    <small>Keep your eyes open for the first 3 seconds while we calibrate.</small></div>
+                </div>
+            </div>
+            <div id="statusBanner" class="status-banner st-idle mt-3">
+                <i class="fas fa-circle-pause"></i><span id="statusText">Monitor stopped</span>
+            </div>
+            <div class="card card-soft mt-3">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span><i class="fas fa-graduation-cap text-primary"></i> Trained model: drowsiness probability (smoothed)</span>
+                        <strong id="vModel">–</strong>
+                    </div>
+                    <div class="progress" style="height:12px"><div id="modelBar" class="progress-bar bg-success" style="width:0%"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card card-soft mb-3">
+                <div class="card-body">
+                    <h6 class="text-muted mb-3">Current frame</h6>
+                    <div class="row g-2">
+                        <div class="col-4"><div class="live-tile"><div class="val" id="vEar">–</div><div class="lbl">EAR</div></div></div>
+                        <div class="col-4"><div class="live-tile"><div class="val" id="vMar">–</div><div class="lbl">MAR</div></div></div>
+                        <div class="col-4"><div class="live-tile"><div class="val" id="vPitch">–</div><div class="lbl">Pitch</div></div></div>
+                        <div class="col-4"><div class="live-tile"><div class="val" id="vClosed">–</div><div class="lbl">Eyes closed for</div></div></div>
+                        <div class="col-4"><div class="live-tile"><div class="val" id="vThresh">–</div><div class="lbl">EAR threshold</div></div></div>
+                        <div class="col-4"><div class="live-tile"><div class="val" id="vFps">–</div><div class="lbl">Analysis fps</div></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card card-soft mb-3">
+                <div class="card-body">
+                    <h6 class="text-muted mb-3">Session</h6>
+                    <div class="row g-2">
+                        <div class="col-4"><div class="live-tile"><div class="val" id="sTime">0:00</div><div class="lbl">Duration</div></div></div>
+                        <div class="col-4"><div class="live-tile"><div class="val text-danger" id="sAlarms">0</div><div class="lbl">Alarms</div></div></div>
+                        <div class="col-4"><div class="live-tile"><div class="val text-warning" id="sYawns">0</div><div class="lbl">Yawns</div></div></div>
+                        <div class="col-4"><div class="live-tile"><div class="val" id="sPerclos">–</div><div class="lbl">PERCLOS (60s)</div></div></div>
+                        <div class="col-4"><div class="live-tile"><div class="val" id="sBlinks">–</div><div class="lbl">Blinks / min</div></div></div>
+                        <div class="col-4"><div class="live-tile"><div class="val" id="sSaved">0</div><div class="lbl">Snapshots saved</div></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card card-soft">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Eye Aspect Ratio</h6>
+                    <div style="height:160px"><canvas id="earChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert alert-info mt-4 mb-0">
+        <i class="fas fa-circle-info"></i>
+        Frames are sent to this server for analysis and are not stored, except a snapshot whenever the drowsiness alarm fires
+        (shown in <a href="{% url 'history' %}">History</a>). Camera access requires <code>localhost</code> or HTTPS.
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    // ---------------- Configuration ----------------
+    const CFG = {
+        intervalMs: 140,          // target time between analysed frames
+        frameWidth: 480,          // frames are downscaled before upload
+        closedAlarmMs: 1500,      // eyes closed this long -> alarm
+        nodAlarmMs: 2000,         // head nodding this long -> alarm
+        noFaceWarnMs: 3000,
+        yawnMinMs: 1000,          // mouth open this long counts as a yawn
+        perclosWindowMs: 60000,
+        perclosWarn: 0.15,
+        yawnWindowMs: 5 * 60000,
+        yawnWarnCount: 3,
+        calibSamples: 20,
+        calibTimeoutMs: 6000,     // fall back to default threshold if calibration can't finish
+        defaultEarThresh: 0.21,
+        blinkClosed: 0.5,
+        modelEma: 0.15,           // smoothing factor for the trained-model probability
+        modelWarn: 0.7,           // smoothed P(drowsy) above this ...
+        modelWarnMs: 5000,        // ... for this long -> fatigue warning
+    };
+
+    const $ = id => document.getElementById(id);
+    const video = $('video'), overlay = $('overlay'), camWrap = $('camWrap');
+    const grab = document.createElement('canvas');
+    const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    let stream = null, running = false, muted = false;
+    let audioCtx = null, beepTimer = null;
+    let S; // session state
+
+    function resetSession() {
+        S = {
+            start: performance.now(), calib: [], calibStart: null, earThresh: null,
+            closedSince: null, nodSince: null, noFaceSince: null, yawnSince: null, yawnCounted: false,
+            samples: [], yawnTimes: [], blinkTimes: [],
+            alarm: false, alarmCount: 0, saved: 0, lastFrameTimes: [],
+            pEma: null, modelHighSince: null,
+        };
+    }
+
+    // ---------------- EAR chart ----------------
+    const earChart = new Chart($('earChart'), {
+        type: 'line',
+        data: { labels: [], datasets: [
+            { data: [], borderColor: '#243b55', borderWidth: 2, pointRadius: 0, tension: .3 },
+            { data: [], borderColor: '#dc3545', borderWidth: 1, borderDash: [5, 5], pointRadius: 0 },
+        ]},
+        options: {
+            animation: false, responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+            scales: { x: { display: false }, y: { min: 0, max: 0.45 } }
+        }
+    });
+    function pushChart(ear, thr) {
+        const d = earChart.data;
+        d.labels.push('');
+        d.datasets[0].data.push(ear);
+        d.datasets[1].data.push(thr);
+        if (d.labels.length > 120) { d.labels.shift(); d.datasets.forEach(s => s.data.shift()); }
+        earChart.update('none');
+    }
+
+    // ---------------- Audio alarm ----------------
+    function beep() {
+        if (muted || !audioCtx) return;
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = 'square'; o.frequency.value = 880;
+        g.gain.setValueAtTime(0.25, audioCtx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+        o.connect(g).connect(audioCtx.destination);
+        o.start(); o.stop(audioCtx.currentTime + 0.3);
+    }
+    function setAlarm(on) {
+        camWrap.classList.toggle('alarm', on);
+        if (on && !beepTimer) { beep(); beepTimer = setInterval(beep, 450); }
+        if (!on && beepTimer) { clearInterval(beepTimer); beepTimer = null; }
+    }
+
+    // ---------------- UI helpers ----------------
+    function setStatus(kind, icon, text) {
+        const b = $('statusBanner');
+        b.className = 'status-banner mt-3 st-' + kind;
+        b.querySelector('i').className = 'fas fa-' + icon;
+        $('statusText').textContent = text;
+    }
+    const fmtTime = ms => { const s = Math.floor(ms / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+
+    function drawOverlay(res, color) {
+        const w = overlay.clientWidth, h = overlay.clientHeight;
+        if (overlay.width !== w || overlay.height !== h) { overlay.width = w; overlay.height = h; }
+        const ctx = overlay.getContext('2d');
+        ctx.clearRect(0, 0, w, h);
+        if (!res.outline) return;
+        // Map normalised frame coords to the object-fit:cover display box
+        const vw = video.videoWidth, vh = video.videoHeight;
+        const scale = Math.max(w / vw, h / vh);
+        const ox = (w - vw * scale) / 2, oy = (h - vh * scale) / 2;
+        ctx.strokeStyle = color; ctx.lineWidth = 2;
+        for (const key of ['left_eye', 'right_eye', 'mouth']) {
+            const pts = res.outline[key];
+            ctx.beginPath();
+            pts.forEach(([x, y], i) => {
+                const px = ox + x * vw * scale, py = oy + y * vh * scale;
+                i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+            });
+            ctx.closePath(); ctx.stroke();
+        }
+    }
+
+    // ---------------- Networking ----------------
+    function captureFrame() {
+        const vw = video.videoWidth, vh = video.videoHeight;
+        grab.width = CFG.frameWidth; grab.height = Math.round(vh * CFG.frameWidth / vw);
+        grab.getContext('2d').drawImage(video, 0, 0, grab.width, grab.height);
+        return new Promise(r => grab.toBlob(r, 'image/jpeg', 0.75));
+    }
+    async function postFrame(blob, save, note) {
+        const fd = new FormData();
+        fd.append('frame', blob, 'frame.jpg');
+        if (save) { fd.append('save', '1'); fd.append('note', note || ''); }
+        const resp = await fetch('{% url "api_analyze_frame" %}', {
+            method: 'POST', body: fd, headers: { 'X-CSRFToken': csrf }, credentials: 'same-origin',
+        });
+        return resp.json();
+    }
+
+    // ---------------- Temporal drowsiness logic ----------------
+    function process(res, blob, now) {
+        const m = res.metrics || {};
+        let alarmReason = null, warn = null;
+
+        if (!res.face_detected) {
+            S.noFaceSince ??= now;
+            S.closedSince = S.nodSince = S.yawnSince = null;
+            drawOverlay(res, '#888');
+            ['vEar', 'vMar', 'vPitch'].forEach(id => $(id).textContent = '–');
+            $('vClosed').textContent = '–';
+            if (now - S.noFaceSince > CFG.noFaceWarnMs) warn = ['user-slash', 'Driver face not visible'];
+            else warn = ['magnifying-glass', 'Looking for face...'];
+            setAlarm(false); S.alarm = false;
+            setStatus('warn', ...warn);
+            return;
+        }
+        S.noFaceSince = null;
+        updateModel(res, now);
+
+        // Calibration: learn this driver's normal open-eye EAR
+        if (S.earThresh === null) {
+            S.calibStart ??= now;
+            if (!res.flags.eyes_closed && m.pitch < 15) S.calib.push(m.ear);
+            const timedOut = now - S.calibStart > CFG.calibTimeoutMs;
+            if (S.calib.length >= CFG.calibSamples || timedOut) {
+                if (S.calib.length >= 5) {
+                    const sorted = [...S.calib].sort((a, b) => a - b);
+                    const median = sorted[Math.floor(sorted.length / 2)];
+                    S.earThresh = Math.min(0.27, Math.max(0.15, median * 0.75));
+                } else {
+                    S.earThresh = CFG.defaultEarThresh; // couldn't calibrate; use default
+                }
+            } else {
+                setStatus('calib', 'sliders', `Calibrating: keep your eyes open (${S.calib.length}/${CFG.calibSamples})`);
+                drawOverlay(res, '#17a2b8');
+                updateTiles(m, 0);
+                pushChart(m.ear, CFG.defaultEarThresh);
+                return;
+            }
+        }
+
+        const closed = m.blink > CFG.blinkClosed || m.ear < S.earThresh;
+        const nodding = !!(res.flags && res.flags.head_nodding);
+        const yawning = !!(res.flags && res.flags.yawning);
+
+        // Eyes closed duration (+ blink counting on re-open)
+        if (closed) S.closedSince ??= now;
+        else {
+            if (S.closedSince !== null && now - S.closedSince < 500) S.blinkTimes.push(now);
+            S.closedSince = null;
+        }
+        const closedMs = S.closedSince !== null ? now - S.closedSince : 0;
+
+        if (nodding) S.nodSince ??= now; else S.nodSince = null;
+        const nodMs = S.nodSince !== null ? now - S.nodSince : 0;
+
+        if (yawning) {
+            S.yawnSince ??= now;
+            if (!S.yawnCounted && now - S.yawnSince >= CFG.yawnMinMs) { S.yawnTimes.push(now); S.yawnCounted = true; }
+        } else { S.yawnSince = null; S.yawnCounted = false; }
+
+        // PERCLOS over sliding window
+        S.samples.push({ t: now, closed });
+        while (S.samples.length && now - S.samples[0].t > CFG.perclosWindowMs) S.samples.shift();
+        const span = now - S.samples[0].t;
+        const perclos = span > 10000 ? S.samples.filter(s => s.closed).length / S.samples.length : null;
+
+        S.yawnTimes = S.yawnTimes.filter(t => now - t < CFG.yawnWindowMs);
+        S.blinkTimes = S.blinkTimes.filter(t => now - t < 60000);
+
+        if (closedMs >= CFG.closedAlarmMs) alarmReason = `Eyes closed for ${(closedMs / 1000).toFixed(1)}s`;
+        else if (nodMs >= CFG.nodAlarmMs) alarmReason = 'Head nodding detected';
+
+        if (alarmReason && !S.alarm) {
+            S.alarmCount++;
+            postFrame(blob, true, 'Live alarm: ' + alarmReason).then(r => { if (r.saved_id) { S.saved++; $('sSaved').textContent = S.saved; } }).catch(() => {});
+        }
+        S.alarm = !!alarmReason;
+        setAlarm(S.alarm);
+
+        if (alarmReason) setStatus('danger', 'bell', 'WAKE UP! ' + alarmReason);
+        else if (perclos !== null && perclos > CFG.perclosWarn) setStatus('warn', 'triangle-exclamation', `Fatigue: eyes closed ${(perclos * 100).toFixed(0)}% of the last minute. Take a break.`);
+        else if (S.modelHighSince !== null && now - S.modelHighSince >= CFG.modelWarnMs) setStatus('warn', 'battery-quarter', `Fatigue: the trained model has seen a tired face for ${((now - S.modelHighSince) / 1000).toFixed(0)}s. Consider resting.`);
+        else if (S.yawnTimes.length >= CFG.yawnWarnCount) setStatus('warn', 'face-tired', `Fatigue: ${S.yawnTimes.length} yawns in 5 min. Consider resting.`);
+        else if (yawning) setStatus('warn', 'face-tired', 'Yawning');
+        else if (closed) setStatus('ok', 'eye-slash', 'Blink');
+        else setStatus('ok', 'eye', 'Driver alert');
+
+        drawOverlay(res, alarmReason ? '#dc3545' : (closed || yawning) ? '#ffc107' : '#28a745');
+        updateTiles(m, closedMs);
+        pushChart(m.ear, S.earThresh);
+
+        $('sAlarms').textContent = S.alarmCount;
+        $('sYawns').textContent = S.yawnTimes.length;
+        $('sPerclos').textContent = perclos === null ? '…' : (perclos * 100).toFixed(0) + '%';
+        const elapsedMin = Math.min(1, (now - S.start) / 60000);
+        $('sBlinks').textContent = elapsedMin > 0.25 ? Math.round(S.blinkTimes.length / elapsedMin) : '…';
+    }
+
+    function updateModel(res, now) {
+        const p = res.learned && res.learned.p_drowsy;
+        if (p === null || p === undefined) return;
+        S.pEma = S.pEma === null ? p : (1 - CFG.modelEma) * S.pEma + CFG.modelEma * p;
+        if (S.pEma >= CFG.modelWarn) S.modelHighSince ??= now; else S.modelHighSince = null;
+        const pct = Math.round(S.pEma * 100);
+        $('vModel').textContent = pct + '%';
+        const bar = $('modelBar');
+        bar.style.width = pct + '%';
+        bar.className = 'progress-bar ' + (S.pEma >= CFG.modelWarn ? 'bg-danger' : S.pEma >= 0.5 ? 'bg-warning' : 'bg-success');
+    }
+
+    function updateTiles(m, closedMs) {
+        $('vEar').textContent = m.ear.toFixed(3);
+        $('vMar').textContent = m.mar.toFixed(2);
+        $('vPitch').textContent = m.pitch.toFixed(0) + '°';
+        $('vClosed').textContent = (closedMs / 1000).toFixed(1) + 's';
+        $('vThresh').textContent = S.earThresh ? S.earThresh.toFixed(3) : '…';
+    }
+
+    // ---------------- Main loop ----------------
+    async function loop() {
+        if (!running) return;
+        const t0 = performance.now();
+        try {
+            if (video.readyState >= 2) {
+                const blob = await captureFrame();
+                const res = await postFrame(blob, false);
+                if (!running) return;
+                if (res.success) process(res, blob, performance.now());
+                else setStatus('warn', 'triangle-exclamation', res.error || 'Analysis error');
+            }
+        } catch (e) {
+            setStatus('warn', 'plug-circle-xmark', 'Server unreachable: ' + e.message);
+        }
+        const now = performance.now();
+        S.lastFrameTimes.push(now);
+        S.lastFrameTimes = S.lastFrameTimes.filter(t => now - t < 2000);
+        $('vFps').textContent = (S.lastFrameTimes.length / 2).toFixed(1);
+        $('sTime').textContent = fmtTime(now - S.start);
+        setTimeout(loop, Math.max(0, CFG.intervalMs - (now - t0)));
+    }
+
+    async function start() {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' }, audio: false });
+        } catch (e) {
+            setStatus('danger', 'video-slash', 'Camera unavailable: ' + e.message);
+            return;
+        }
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        video.srcObject = stream;
+        await video.play();
+        $('placeholder').style.display = 'none';
+        resetSession();
+        earChart.data.labels = []; earChart.data.datasets.forEach(d => d.data = []);
+        running = true;
+        $('startBtn').innerHTML = '<i class="fas fa-stop me-1"></i> Stop';
+        loop();
+    }
+
+    function stop() {
+        running = false;
+        setAlarm(false);
+        if (stream) stream.getTracks().forEach(t => t.stop());
+        stream = null;
+        video.srcObject = null;
+        overlay.getContext('2d').clearRect(0, 0, overlay.width, overlay.height);
+        $('placeholder').style.display = 'flex';
+        $('startBtn').innerHTML = '<i class="fas fa-play me-1"></i> Start';
+        setStatus('idle', 'circle-pause', 'Monitor stopped');
+    }
+
+    $('startBtn').addEventListener('click', () => running ? stop() : start());
+    $('muteBtn').addEventListener('click', () => {
+        muted = !muted;
+        $('muteBtn').innerHTML = `<i class="fas fa-volume-${muted ? 'xmark' : 'high'}"></i>`;
+    });
+    window.addEventListener('beforeunload', stop);
+    resetSession();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,123 @@
+{% extends 'detector/base.html' %}
+
+{% block title %}Upload Image - Driver Drowsiness Detection{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="hero text-center mb-4">
+                <div class="hero-icon mx-auto mb-3"><i class="fas fa-image"></i></div>
+                <h1 class="fw-bold">Analyze a Driver Image</h1>
+                <p class="lead mb-0" style="opacity:.9">Upload a photo of the driver's face to check for closed eyes, yawning and head nodding.</p>
+            </div>
+
+            <div class="card card-soft">
+                <div class="card-body p-4">
+                    <form method="post" enctype="multipart/form-data" id="uploadForm" action="{% url 'upload_image' %}">
+                        {% csrf_token %}
+                        <div class="upload-area mb-4" id="uploadArea">
+                            <div id="uploadContent">
+                                <i class="fas fa-cloud-upload-alt fa-4x mb-3" style="color:#243b55"></i>
+                                <h4>Drop your image here</h4>
+                                <p class="text-muted">or click to browse (JPG, PNG, WEBP, max 10MB)</p>
+                                {{ form.image }}
+                            </div>
+                            <div id="previewContent" style="display:none;">
+                                <img id="imagePreview" src="" alt="Preview" class="img-fluid rounded mb-3" style="max-height:300px;">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span id="fileName" class="text-muted"></span>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" id="removeImage"><i class="fas fa-times"></i> Remove</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-accent btn-lg px-5" id="analyzeBtn">
+                                <i class="fas fa-magnifying-glass me-2"></i>Detect Drowsiness
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-body text-center p-4">
+                            <div class="spinner-border text-primary mb-3" style="width:3rem;height:3rem;"></div>
+                            <h5>Analyzing face...</h5>
+                            <p class="text-muted mb-0">Locating landmarks and measuring eye / mouth openness</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h4 class="text-center mt-5 mb-3"><i class="fas fa-lightbulb text-warning"></i> Tips for best results</h4>
+            <div class="row g-3">
+                <div class="col-md-6"><div class="card card-soft p-3"><h6><i class="fas fa-user text-primary"></i> Face the camera</h6><small class="text-muted">A frontal or slightly-angled face works best. Strong profile views reduce accuracy.</small></div></div>
+                <div class="col-md-6"><div class="card card-soft p-3"><h6><i class="fas fa-sun text-warning"></i> Good lighting</h6><small class="text-muted">Avoid heavy shadows or backlight over the eyes.</small></div></div>
+                <div class="col-md-6"><div class="card card-soft p-3"><h6><i class="fas fa-glasses text-info"></i> Sunglasses</h6><small class="text-muted">Dark glasses hide the eyes; eye closure can't be measured through them.</small></div></div>
+                <div class="col-md-6"><div class="card card-soft p-3"><h6><i class="fas fa-video text-danger"></i> Use live mode</h6><small class="text-muted">A single photo can't tell a blink from sleep. Live mode measures how long the eyes stay closed.</small></div></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const area = document.getElementById('uploadArea');
+    const input = document.getElementById('id_image');
+    const uploadContent = document.getElementById('uploadContent');
+    const previewContent = document.getElementById('previewContent');
+    const preview = document.getElementById('imagePreview');
+    const fileName = document.getElementById('fileName');
+    const form = document.getElementById('uploadForm');
+    const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(ev =>
+        area.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); }));
+    ['dragenter', 'dragover'].forEach(ev => area.addEventListener(ev, () => area.classList.add('drag')));
+    ['dragleave', 'drop'].forEach(ev => area.addEventListener(ev, () => area.classList.remove('drag')));
+
+    area.addEventListener('drop', e => {
+        if (e.dataTransfer.files.length) {
+            const dt = new DataTransfer();
+            dt.items.add(e.dataTransfer.files[0]);
+            input.files = dt.files;
+            showPreview(e.dataTransfer.files[0]);
+        }
+    });
+    area.addEventListener('click', e => {
+        if (e.target.closest('#removeImage')) return;
+        input.click();
+    });
+    input.addEventListener('change', e => { if (e.target.files.length) showPreview(e.target.files[0]); });
+    document.getElementById('removeImage').addEventListener('click', e => {
+        e.stopPropagation();
+        input.value = '';
+        uploadContent.style.display = 'block';
+        previewContent.style.display = 'none';
+    });
+    form.addEventListener('submit', e => {
+        if (!input.files.length) { e.preventDefault(); alert('Please select an image first.'); return; }
+        loadingModal.show();
+    });
+
+    function showPreview(file) {
+        if (!file.type.startsWith('image/')) { alert('Please select a valid image file.'); return; }
+        if (file.size > 10 * 1024 * 1024) { alert('File size must be less than 10MB.'); return; }
+        const reader = new FileReader();
+        reader.onload = ev => {
+            preview.src = ev.target.result;
+            fileName.textContent = file.name;
+            uploadContent.style.display = 'none';
+            previewContent.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,163 @@
+{% extends 'detector/base.html' %}
+
+{% block title %}How It Works - Driver Drowsiness Detection{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            <div class="text-center mb-5">
+                <h1 class="display-5 fw-bold"><i class="fas fa-info-circle" style="color:#243b55"></i> How It Works</h1>
+                <p class="lead text-muted">Facial-landmark based drowsiness detection</p>
+            </div>
+
+            <div class="card card-soft mb-4">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-cog text-primary"></i> Model status</h6>
+                            <span class="badge bg-{% if info.status == 'Model loaded' %}success{% else %}warning text-dark{% endif %}">{{ info.status }}</span>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-brain text-success"></i> Landmark model</h6>
+                            <p class="mb-0">{{ info.landmark_model }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card card-soft mb-4">
+                <div class="card-header bg-white border-0 pt-3"><h5 class="mb-0"><i class="fas fa-graduation-cap text-success"></i> Trained models</h5></div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Two models were trained on a driver drowsiness dataset and are combined into the final drowsy / not-drowsy verdict:
+                        a <strong>CNN</strong> (YOLOv8n-cls, fine-tuned) that looks at the face image, and a <strong>gradient-boosting classifier</strong>
+                        over the landmark measurements and 52 facial expression scores. The rule-based state below explains <em>why</em>
+                        (eyes closed, yawning, nodding), and the live monitor's timers still use it.
+                    </p>
+                    <p class="mb-2">
+                        <span class="badge bg-{% if info.learned.cnn %}success{% else %}secondary{% endif %}">CNN {% if info.learned.cnn %}loaded{% else %}not found{% endif %}</span>
+                        <span class="badge bg-{% if info.learned.landmark %}success{% else %}secondary{% endif %}">Landmark classifier {% if info.learned.landmark %}loaded{% else %}not found{% endif %}</span>
+                    </p>
+                    {% if info.evaluation %}
+                    <h6 class="mt-3">Test-set results</h6>
+                    <p class="small text-muted mb-2">
+                        {{ info.evaluation.train }} train / {{ info.evaluation.valid }} validation / {{ info.evaluation.test }} test face images,
+                        split so that no photo (or augmented copy of it) appears in more than one split.
+                    </p>
+                    <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead><tr><th>Run</th><th>Accuracy</th><th>Drowsy recall</th><th>Drowsy precision</th><th>ROC-AUC</th></tr></thead>
+                        <tbody>
+                        {% for r in info.evaluation.results %}
+                            <tr>
+                                <td>{{ r.run }}</td>
+                                <td>{% widthratio r.accuracy 1 100 %}%</td>
+                                <td>{% widthratio r.drowsy_recall 1 100 %}%</td>
+                                <td>{% widthratio r.drowsy_precision 1 100 %}%</td>
+                                <td>{% if r.roc_auc %}{{ r.roc_auc|floatformat:3 }}{% else %}–{% endif %}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card card-soft mb-4">
+                <div class="card-header bg-white border-0 pt-3"><h5 class="mb-0"><i class="fas fa-eye text-info"></i> The signals</h5></div>
+                <div class="card-body">
+                    <h6>Eye Aspect Ratio (EAR)</h6>
+                    <p class="text-muted">
+                        Six landmarks around each eye give
+                        <code>EAR = (|p2−p6| + |p3−p5|) / (2·|p1−p4|)</code>.
+                        An open eye is around 0.25–0.35; it falls towards 0 as the lids close.
+                        It's fused with MediaPipe's <em>eyeBlink</em> blendshape score for robustness.
+                    </p>
+                    <h6>Mouth Aspect Ratio (MAR)</h6>
+                    <p class="text-muted">
+                        Average inner-lip opening divided by mouth width. A wide, sustained opening means a yawn.
+                        It's fused with the <em>jawOpen</em> blendshape.
+                    </p>
+                    <h6>Head pitch</h6>
+                    <p class="text-muted mb-0">
+                        Derived from the 3-D facial transformation matrix. A large forward tilt
+                        (chin dropping to chest) indicates nodding off.
+                    </p>
+                </div>
+            </div>
+
+            <div class="card card-soft mb-4">
+                <div class="card-header bg-white border-0 pt-3"><h5 class="mb-0"><i class="fas fa-sliders text-warning"></i> Thresholds</h5></div>
+                <div class="card-body">
+                    <table class="table align-middle mb-0">
+                        <thead><tr><th>Signal</th><th>Threshold</th><th>Meaning</th></tr></thead>
+                        <tbody>
+                        {% for t in info.thresholds %}
+                            <tr><td>{{ t.name }}</td><td><code>{{ t.value }}</code></td><td>{{ t.meaning }}</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card card-soft mb-4">
+                <div class="card-header bg-white border-0 pt-3"><h5 class="mb-0"><i class="fas fa-stopwatch text-danger"></i> Live monitor logic</h5></div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li><strong>Calibration:</strong> during the first ~3 s the driver's normal open-eye EAR is measured and the closed-eye threshold is set to 75% of it.</li>
+                        <li><strong>Drowsy alarm:</strong> eyes closed continuously for ≥ 1.5 s, or head nodding for ≥ 2 s. A beep sounds and a snapshot is saved to history.</li>
+                        <li><strong>PERCLOS:</strong> percentage of time the eyes were closed over the last 60 s. Above 15% raises a fatigue warning.</li>
+                        <li><strong>Yawn counter:</strong> yawns lasting ≥ 1 s are counted. 3 or more in 5 minutes raises a fatigue warning.</li>
+                        <li><strong>Face lost:</strong> no face for ≥ 3 s shows a "driver not visible" warning.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card card-soft mb-4">
+                <div class="card-header bg-white border-0 pt-3"><h5 class="mb-0"><i class="fas fa-tags text-secondary"></i> Driver states</h5></div>
+                <div class="card-body">
+                    <div class="row g-2">
+                        {% for s in info.states %}
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-2 bg-light rounded">
+                                <i class="fas fa-{{ s.icon }} text-{{ s.color }} me-2"></i>
+                                <span class="me-auto">{{ s.name }}</span>
+                                <span class="badge bg-{{ s.color }}">{{ s.risk }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card card-soft mb-4">
+                <div class="card-header bg-white border-0 pt-3"><h5 class="mb-0"><i class="fas fa-tools"></i> Tech stack</h5></div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="list-unstyled mb-0">
+                                <li><i class="fab fa-python text-primary"></i> Django 4.2</li>
+                                <li><i class="fas fa-brain text-success"></i> MediaPipe Face Landmarker</li>
+                                <li><i class="fas fa-image text-info"></i> OpenCV</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-unstyled mb-0">
+                                <li><i class="fab fa-bootstrap text-primary"></i> Bootstrap 5</li>
+                                <li><i class="fas fa-chart-line text-warning"></i> Chart.js</li>
+                                <li><i class="fas fa-video text-danger"></i> WebRTC getUserMedia</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center">
+                <a href="{% url 'live_monitor' %}" class="btn btn-accent btn-lg"><i class="fas fa-video me-2"></i>Try the Live Monitor</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

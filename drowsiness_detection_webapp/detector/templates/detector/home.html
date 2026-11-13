@@ -1,0 +1,110 @@
+{% extends 'detector/base.html' %}
+
+{% block title %}Home - Driver Drowsiness Detection{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <section class="hero mb-5">
+        <div class="row align-items-center g-4">
+            <div class="col-lg-7">
+                <div class="hero-icon mb-4"><i class="fas fa-eye"></i></div>
+                <h1 class="display-5 fw-bold mb-3">Driver Drowsiness Detection</h1>
+                <p class="lead mb-4" style="opacity:.9">
+                    Real-time computer vision that watches the driver's eyes, mouth and head position,
+                    and raises an alarm at the first signs of fatigue: closed eyes, yawning or nodding off.
+                </p>
+                <div class="d-flex flex-wrap gap-3">
+                    <a href="{% url 'live_monitor' %}" class="btn btn-accent btn-lg"><i class="fas fa-video me-2"></i>Start Live Monitor</a>
+                    <a href="{% url 'upload_image' %}" class="btn btn-ghost btn-lg"><i class="fas fa-upload me-2"></i>Analyze an Image</a>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="row g-3 text-center">
+                    <div class="col-6"><div class="glass-stat"><div class="num">478</div><div class="lbl">Face landmarks</div></div></div>
+                    <div class="col-6"><div class="glass-stat"><div class="num">3</div><div class="lbl">Fatigue signals</div></div></div>
+                    <div class="col-6"><div class="glass-stat"><div class="num">1.5s</div><div class="lbl">Eyes-closed alarm</div></div></div>
+                    <div class="col-6"><div class="glass-stat"><div class="num">~7 fps</div><div class="lbl">Live analysis</div></div></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="mb-5">
+        <div class="text-center mb-4">
+            <h2 class="fw-bold">How It Works</h2>
+            <p class="text-muted">Facial-landmark geometry fused with expression scores. No special hardware, just a camera.</p>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card card-soft h-100 text-center p-3">
+                    <div class="card-body">
+                        <i class="fas fa-camera fa-3x mb-3" style="color:#243b55"></i>
+                        <h5>1. Capture</h5>
+                        <p class="text-muted mb-0">Use your webcam for continuous monitoring, or upload a single photo of the driver's face.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card card-soft h-100 text-center p-3">
+                    <div class="card-body">
+                        <i class="fas fa-draw-polygon fa-3x mb-3 text-success"></i>
+                        <h5>2. Measure</h5>
+                        <p class="text-muted mb-0">MediaPipe locates 478 face landmarks. We compute the Eye Aspect Ratio, Mouth Aspect Ratio and head pitch.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card card-soft h-100 text-center p-3">
+                    <div class="card-body">
+                        <i class="fas fa-bell fa-3x mb-3 text-danger"></i>
+                        <h5>3. Alert</h5>
+                        <p class="text-muted mb-0">If the eyes stay closed or the head droops for too long, an audible alarm sounds and the event is logged.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="mb-5">
+        <div class="text-center mb-4">
+            <h2 class="fw-bold">What We Detect</h2>
+        </div>
+        <div class="row g-3">
+            <div class="col-6 col-lg-3">
+                <div class="card card-soft text-center p-3 h-100">
+                    <i class="fas fa-eye fa-2x text-success mb-2"></i>
+                    <h6 class="mb-1">Alert</h6>
+                    <small class="text-muted">Eyes open, head upright</small>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="card card-soft text-center p-3 h-100">
+                    <i class="fas fa-face-tired fa-2x text-warning mb-2"></i>
+                    <h6 class="mb-1">Yawning</h6>
+                    <small class="text-muted">Early fatigue sign</small>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="card card-soft text-center p-3 h-100">
+                    <i class="fas fa-eye-slash fa-2x text-danger mb-2"></i>
+                    <h6 class="mb-1">Eyes closed</h6>
+                    <small class="text-muted">Microsleep risk</small>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="card card-soft text-center p-3 h-100">
+                    <i class="fas fa-bed fa-2x text-danger mb-2"></i>
+                    <h6 class="mb-1">Head nodding</h6>
+                    <small class="text-muted">Falling asleep</small>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="hero text-center">
+        <h2 class="fw-bold mb-3">Stay awake. Stay alive.</h2>
+        <p class="lead mb-4" style="opacity:.9">Drowsy driving causes thousands of crashes every year. Try the live monitor now.</p>
+        <a href="{% url 'live_monitor' %}" class="btn btn-accent btn-lg"><i class="fas fa-video me-2"></i>Open Live Monitor</a>
+    </section>
+</div>
+{% endblock %}

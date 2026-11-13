@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Driver Drowsiness Detection{% endblock %}</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <style>
+        :root {
+            --night-1: #141e30;
+            --night-2: #243b55;
+            --accent: #f7b733;
+        }
+        body { background: #f5f7fb; }
+        .navbar { background: linear-gradient(90deg, var(--night-1), var(--night-2)); }
+        .navbar-brand { font-weight: 700; }
+        .navbar-brand i { color: var(--accent); }
+
+        .hero {
+            background: linear-gradient(135deg, var(--night-1) 0%, var(--night-2) 100%);
+            color: #fff;
+            border-radius: 20px;
+            padding: 3.5rem 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::after {
+            content: "";
+            position: absolute; inset: 0;
+            background-image: radial-gradient(rgba(255,255,255,.15) 1px, transparent 1px);
+            background-size: 28px 28px;
+            pointer-events: none;
+        }
+        .hero > * { position: relative; z-index: 1; }
+        .hero-icon {
+            width: 80px; height: 80px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.3);
+            font-size: 2.3rem; color: var(--accent);
+            animation: float 3s ease-in-out infinite;
+        }
+        .glass-stat {
+            background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2);
+            border-radius: 14px; padding: 1rem;
+        }
+        .glass-stat .num { font-size: 1.6rem; font-weight: 700; }
+        .glass-stat .lbl { font-size: .8rem; opacity: .8; text-transform: uppercase; letter-spacing: 1px; }
+
+        .card-soft { border: 0; border-radius: 16px; box-shadow: 0 4px 18px rgba(20, 30, 48, .08); }
+        .btn-accent {
+            background: linear-gradient(135deg, #f7b733, #fc4a1a); color: #fff; border: 0;
+            border-radius: 12px; font-weight: 600; padding: .8rem 1.8rem;
+        }
+        .btn-accent:hover { color: #fff; filter: brightness(1.05); transform: translateY(-1px); }
+        .btn-ghost {
+            background: rgba(255,255,255,.12); color: #fff; border: 1px solid rgba(255,255,255,.3);
+            border-radius: 12px; font-weight: 600; padding: .8rem 1.8rem;
+        }
+        .btn-ghost:hover { color: #fff; background: rgba(255,255,255,.2); }
+
+        .upload-area {
+            border: 2px dashed #ced4da; border-radius: 16px; padding: 3rem 2rem;
+            text-align: center; background: #fafbfc; cursor: pointer; transition: all .2s ease;
+        }
+        .upload-area:hover, .upload-area.drag { border-color: var(--night-2); background: #eef3fa; }
+
+        .metric-tile { background: #f8f9fa; border-radius: 12px; padding: 1rem; text-align: center; }
+        .metric-tile .val { font-size: 1.5rem; font-weight: 700; }
+        .metric-tile .lbl { font-size: .8rem; color: #6c757d; }
+
+        .footer { background: var(--night-1); color: #cfd8e3; padding: 2rem 0; margin-top: 4rem; }
+
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'home' %}">
+                <i class="fas fa-moon"></i> Drowsiness Guard
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="{% url 'home' %}"><i class="fas fa-home"></i> Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'live_monitor' %}"><i class="fas fa-video"></i> Live Monitor</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'upload_image' %}"><i class="fas fa-upload"></i> Upload</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'history' %}"><i class="fas fa-history"></i> History</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'model_info' %}"><i class="fas fa-info-circle"></i> How It Works</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    {% if messages %}
+        <div class="container mt-3">
+            {% for message in messages %}
+                <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5 class="text-white">Driver Drowsiness Detection</h5>
+                    <p class="mb-0">Computer-vision system that detects closed eyes, yawning and head nodding to warn fatigued drivers.</p>
+                </div>
+                <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                    <p class="mb-1">Built with Django, OpenCV &amp; MediaPipe.</p>
+                    <small><i class="fas fa-shield-alt"></i> Never drive drowsy. Pull over and rest.</small>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
