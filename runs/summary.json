@@ -1,0 +1,196 @@
+{
+  "dataset": {
+    "source": "https://huggingface.co/datasets/n7i5x9/driver-drowsiness-dataset",
+    "classes": [
+      "drowsy",
+      "not_drowsy"
+    ],
+    "image_size": "320x320 (resized from 640x640)",
+    "total_images": 23116,
+    "unique_images_by_hash": 15177,
+    "groups": 5237,
+    "dropped_cross_split_duplicates": {
+      "valid": 739,
+      "test": 781
+    },
+    "face_filter": {
+      "images_with_face": 13814,
+      "images_without_face": 9302,
+      "excluded_by_split_class": {
+        "test/drowsy": 465,
+        "test/not_drowsy": 320,
+        "train/drowsy": 4715,
+        "train/not_drowsy": 2808,
+        "valid/drowsy": 482,
+        "valid/not_drowsy": 349
+      }
+    },
+    "published_split_counts": {
+      "train": {
+        "drowsy": 10435,
+        "not_drowsy": 8057
+      },
+      "valid": {
+        "drowsy": 1304,
+        "not_drowsy": 1007
+      },
+      "test": {
+        "drowsy": 1305,
+        "not_drowsy": 1008
+      }
+    },
+    "published_split_leakage": {
+      "train&test": {
+        "shared_hashes": 974,
+        "pct_of_test_unique": 44.88
+      },
+      "train&valid": {
+        "shared_hashes": 974,
+        "pct_of_valid_unique": 45.24
+      },
+      "valid&test": {
+        "shared_hashes": 213,
+        "pct_of_test_unique": 9.82
+      }
+    },
+    "new_split_counts": {
+      "train": {
+        "drowsy": 5759,
+        "not_drowsy": 5214
+      },
+      "valid": {
+        "drowsy": 366,
+        "not_drowsy": 373
+      },
+      "test": {
+        "drowsy": 383,
+        "not_drowsy": 362
+      }
+    },
+    "new_split_leakage": {
+      "train&test": {
+        "shared_hashes": 0,
+        "pct_of_test_unique": 0.0
+      },
+      "train&valid": {
+        "shared_hashes": 0,
+        "pct_of_valid_unique": 0.0
+      },
+      "valid&test": {
+        "shared_hashes": 0,
+        "pct_of_test_unique": 0.0
+      }
+    },
+    "split_method": "group-aware by original file stem, stratified by class, 80/10/10, seed 42; cross-split dHash-16 duplicates removed from valid/test; images without a detectable face excluded"
+  },
+  "results": [
+    {
+      "run": "Run 1: Rule-based landmarks (EAR/MAR/pitch thresholds)",
+      "model": "Rule-based landmarks (EAR < 0.21 / blink > 0.5, MAR > 0.6 / jawOpen > 0.5, pitch > 20\u00b0)",
+      "n_test": 745,
+      "accuracy": 0.655,
+      "drowsy_precision": 0.6346,
+      "drowsy_recall": 0.7755,
+      "drowsy_f1": 0.698,
+      "macro_f1": 0.6479,
+      "roc_auc": null,
+      "confusion_matrix": {
+        "labels": [
+          "drowsy",
+          "not_drowsy"
+        ],
+        "rows_true_cols_pred": [
+          [
+            297,
+            86
+          ],
+          [
+            171,
+            191
+          ]
+        ]
+      }
+    },
+    {
+      "run": "Run 2: CNN, YOLOv8n-cls (fine-tuned)",
+      "model": "YOLOv8n-cls (ImageNet-pretrained, fine-tuned)",
+      "n_test": 745,
+      "accuracy": 0.8846,
+      "drowsy_precision": 0.8462,
+      "drowsy_recall": 0.9478,
+      "drowsy_f1": 0.8941,
+      "macro_f1": 0.8836,
+      "roc_auc": 0.9397,
+      "confusion_matrix": {
+        "labels": [
+          "drowsy",
+          "not_drowsy"
+        ],
+        "rows_true_cols_pred": [
+          [
+            363,
+            20
+          ],
+          [
+            66,
+            296
+          ]
+        ]
+      }
+    },
+    {
+      "run": "Run 3: Landmark features + gradient boosting",
+      "model": "Landmark classifier: hist_gradient_boosting/all_features",
+      "n_test": 745,
+      "accuracy": 0.8698,
+      "drowsy_precision": 0.8438,
+      "drowsy_recall": 0.9164,
+      "drowsy_f1": 0.8786,
+      "macro_f1": 0.8691,
+      "roc_auc": 0.9159,
+      "confusion_matrix": {
+        "labels": [
+          "drowsy",
+          "not_drowsy"
+        ],
+        "rows_true_cols_pred": [
+          [
+            351,
+            32
+          ],
+          [
+            65,
+            297
+          ]
+        ]
+      }
+    },
+    {
+      "run": "Run 4: Ensemble (CNN + landmark classifier)",
+      "model": "Ensemble: 0.8 x CNN (full) + 0.2 x landmark classifier",
+      "n_test": 745,
+      "accuracy": 0.8859,
+      "drowsy_precision": 0.8449,
+      "drowsy_recall": 0.953,
+      "drowsy_f1": 0.8957,
+      "macro_f1": 0.8849,
+      "roc_auc": 0.945,
+      "confusion_matrix": {
+        "labels": [
+          "drowsy",
+          "not_drowsy"
+        ],
+        "rows_true_cols_pred": [
+          [
+            365,
+            18
+          ],
+          [
+            67,
+            295
+          ]
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "logistic_regression/geometry_only": {
+    "valid_accuracy": 0.7659,
+    "valid_f1_drowsy": 0.7653,
+    "valid_roc_auc": 0.818
+  },
+  "random_forest/geometry_only": {
+    "valid_accuracy": 0.8336,
+    "valid_f1_drowsy": 0.8379,
+    "valid_roc_auc": 0.8783
+  },
+  "hist_gradient_boosting/geometry_only": {
+    "valid_accuracy": 0.8309,
+    "valid_f1_drowsy": 0.8344,
+    "valid_roc_auc": 0.8827
+  },
+  "mlp/geometry_only": {
+    "valid_accuracy": 0.8295,
+    "valid_f1_drowsy": 0.8346,
+    "valid_roc_auc": 0.8801
+  },
+  "logistic_regression/all_features": {
+    "valid_accuracy": 0.7943,
+    "valid_f1_drowsy": 0.7957,
+    "valid_roc_auc": 0.8406
+  },
+  "random_forest/all_features": {
+    "valid_accuracy": 0.8512,
+    "valid_f1_drowsy": 0.8537,
+    "valid_roc_auc": 0.8945
+  },
+  "hist_gradient_boosting/all_features": {
+    "valid_accuracy": 0.8471,
+    "valid_f1_drowsy": 0.8503,
+    "valid_roc_auc": 0.9016
+  },
+  "mlp/all_features": {
+    "valid_accuracy": 0.8484,
+    "valid_f1_drowsy": 0.8503,
+    "valid_roc_auc": 0.9001
+  }
+}

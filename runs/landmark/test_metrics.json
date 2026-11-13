@@ -1,0 +1,28 @@
+{
+  "model": "Landmark classifier: hist_gradient_boosting/all_features",
+  "split": "test",
+  "n_images": 745,
+  "accuracy": 0.8698,
+  "drowsy_precision": 0.8438,
+  "drowsy_recall": 0.9164,
+  "drowsy_f1": 0.8786,
+  "macro_f1": 0.8691,
+  "roc_auc": 0.9159,
+  "confusion_matrix": {
+    "labels": [
+      "drowsy",
+      "not_drowsy"
+    ],
+    "rows_true_cols_pred": [
+      [
+        351,
+        32
+      ],
+      [
+        65,
+        297
+      ]
+    ]
+  },
+  "selected_on": "validation ROC-AUC"
+}

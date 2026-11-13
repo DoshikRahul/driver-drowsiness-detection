@@ -1,0 +1,84 @@
+{
+  "source": "https://huggingface.co/datasets/n7i5x9/driver-drowsiness-dataset",
+  "classes": [
+    "drowsy",
+    "not_drowsy"
+  ],
+  "image_size": "320x320 (resized from 640x640)",
+  "total_images": 23116,
+  "unique_images_by_hash": 15177,
+  "groups": 5237,
+  "dropped_cross_split_duplicates": {
+    "valid": 739,
+    "test": 781
+  },
+  "face_filter": {
+    "images_with_face": 13814,
+    "images_without_face": 9302,
+    "excluded_by_split_class": {
+      "test/drowsy": 465,
+      "test/not_drowsy": 320,
+      "train/drowsy": 4715,
+      "train/not_drowsy": 2808,
+      "valid/drowsy": 482,
+      "valid/not_drowsy": 349
+    }
+  },
+  "published_split_counts": {
+    "train": {
+      "drowsy": 10435,
+      "not_drowsy": 8057
+    },
+    "valid": {
+      "drowsy": 1304,
+      "not_drowsy": 1007
+    },
+    "test": {
+      "drowsy": 1305,
+      "not_drowsy": 1008
+    }
+  },
+  "published_split_leakage": {
+    "train&test": {
+      "shared_hashes": 974,
+      "pct_of_test_unique": 44.88
+    },
+    "train&valid": {
+      "shared_hashes": 974,
+      "pct_of_valid_unique": 45.24
+    },
+    "valid&test": {
+      "shared_hashes": 213,
+      "pct_of_test_unique": 9.82
+    }
+  },
+  "new_split_counts": {
+    "train": {
+      "drowsy": 5759,
+      "not_drowsy": 5214
+    },
+    "valid": {
+      "drowsy": 366,
+      "not_drowsy": 373
+    },
+    "test": {
+      "drowsy": 383,
+      "not_drowsy": 362
+    }
+  },
+  "new_split_leakage": {
+    "train&test": {
+      "shared_hashes": 0,
+      "pct_of_test_unique": 0.0
+    },
+    "train&valid": {
+      "shared_hashes": 0,
+      "pct_of_valid_unique": 0.0
+    },
+    "valid&test": {
+      "shared_hashes": 0,
+      "pct_of_test_unique": 0.0
+    }
+  },
+  "split_method": "group-aware by original file stem, stratified by class, 80/10/10, seed 42; cross-split dHash-16 duplicates removed from valid/test; images without a detectable face excluded"
+}

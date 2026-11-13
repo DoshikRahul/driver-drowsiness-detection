@@ -1,0 +1,45 @@
+{
+  "model": "Rule-based landmarks (EAR < 0.21 / blink > 0.5, MAR > 0.6 / jawOpen > 0.5, pitch > 20\u00b0)",
+  "split": "test",
+  "n_images": 745,
+  "face_detection_rate": 1.0,
+  "accuracy": 0.655,
+  "drowsy_precision": 0.6346,
+  "drowsy_recall": 0.7755,
+  "drowsy_f1": 0.698,
+  "macro_f1": 0.6479,
+  "accuracy_on_detected_faces": 0.655,
+  "confusion_matrix": {
+    "labels": [
+      "drowsy",
+      "not_drowsy"
+    ],
+    "rows_true_cols_pred": [
+      [
+        297,
+        86
+      ],
+      [
+        171,
+        191
+      ]
+    ]
+  },
+  "predicted_state_counts_by_true_class": {
+    "drowsy": {
+      "Alert": 86,
+      "Eyes closed": 136,
+      "Yawning": 158,
+      "Head nodding": 3,
+      "No face": 0
+    },
+    "not_drowsy": {
+      "Alert": 191,
+      "Eyes closed": 89,
+      "Yawning": 72,
+      "Head nodding": 10,
+      "No face": 0
+    }
+  },
+  "ms_per_image_cpu": 17.25
+}

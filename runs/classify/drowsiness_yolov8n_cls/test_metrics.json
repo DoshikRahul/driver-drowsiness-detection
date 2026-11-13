@@ -1,0 +1,57 @@
+{
+  "split": "test",
+  "n_images": 745,
+  "accuracy": 0.8846,
+  "drowsy_precision": 0.8462,
+  "drowsy_recall": 0.9478,
+  "drowsy_f1": 0.8941,
+  "macro_f1": 0.8836,
+  "roc_auc": 0.9397,
+  "confusion_matrix": {
+    "labels": [
+      "drowsy",
+      "not_drowsy"
+    ],
+    "rows_true_cols_pred": [
+      [
+        363,
+        20
+      ],
+      [
+        66,
+        296
+      ]
+    ]
+  },
+  "ms_per_image_cpu_batched": 2.67,
+  "report": {
+    "drowsy": {
+      "precision": 0.8461538461538461,
+      "recall": 0.9477806788511749,
+      "f1-score": 0.8940886699507389,
+      "support": 383.0
+    },
+    "not_drowsy": {
+      "precision": 0.9367088607594937,
+      "recall": 0.8176795580110497,
+      "f1-score": 0.8731563421828908,
+      "support": 362.0
+    },
+    "accuracy": 0.8845637583892617,
+    "macro avg": {
+      "precision": 0.8914313534566699,
+      "recall": 0.8827301184311123,
+      "f1-score": 0.8836225060668148,
+      "support": 745.0
+    },
+    "weighted avg": {
+      "precision": 0.8901550747273287,
+      "recall": 0.8845637583892617,
+      "f1-score": 0.8839175254514624,
+      "support": 745.0
+    }
+  },
+  "model": "YOLOv8n-cls (ImageNet-pretrained, fine-tuned)",
+  "imgsz": 224,
+  "epochs_requested": 20
+}
