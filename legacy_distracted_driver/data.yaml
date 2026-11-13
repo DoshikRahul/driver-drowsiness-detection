@@ -1,0 +1,7 @@
+path: yolo_dataset
+train: train/images
+val: valid/images
+test: test/images
+
+nc: 8
+names: ['drinking', 'hair and makeup', 'operating the radio', 'reaching behind', 'safe driving', 'talking on the phone', 'talking to passenger', 'texting']
