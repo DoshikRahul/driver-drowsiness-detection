@@ -375,8 +375,8 @@ DRIVER DROWSINESS DETECTION/
 │   ├── train_landmark_classifier.py  Run 3: landmark classifier
 │   ├── evaluate_ensemble.py          Run 4: ensemble
 │   └── summarize_runs.py             Summary table + comparison chart
-├── datasets/driver_drowsiness/       Prepared images: train / valid / test
-├── runs/                             Metrics, curves, confusion matrices, logs
+├── datasets/driver_drowsiness/       Prepared images (not in git; rebuilt by scripts/01_prepare_dataset.sh)
+├── runs/                             Metrics, curves, confusion matrices (logs are local only)
 ├── drowsiness_detection_webapp/      Django project
 │   ├── manage.py
 │   ├── requirements.txt
@@ -388,7 +388,7 @@ DRIVER DROWSINESS DETECTION/
 │       ├── urls.py / forms.py / admin.py / tests.py
 │       ├── templates/detector/       home, live, upload, result, history, model_info
 │       └── test_data/                Sample images used by the automated tests
-└── legacy_distracted_driver/         Archived earlier distracted-driver version (not used)
+└── legacy_distracted_driver/         Scripts from the earlier distracted-driver version (not used)
 """)
 
     d.add_heading("10. Application Pages and Endpoints", level=1)
@@ -438,6 +438,8 @@ DRIVER DROWSINESS DETECTION/
     d.add_heading("13. Quick Start", level=1)
     para(d, "See EXECUTION_GUIDE.docx for full step-by-step instructions. In short:")
     code(d, """
+git clone https://github.com/DoshikRahul/driver-drowsiness-detection.git
+cd driver-drowsiness-detection
 python -m venv .venv
 source .venv/bin/activate          (Windows: .venv\\Scripts\\activate)
 pip install -r drowsiness_detection_webapp/requirements.txt
@@ -543,10 +545,13 @@ def build_execution():
     para(d, "The output must show Python 3.10 or newer. If Python is missing, install it from "
             "https://www.python.org/downloads/. On Windows, tick \"Add Python to PATH\" during installation.")
 
-    d.add_heading("Step 2: Open the project folder", level=2)
-    para(d, "Move into the project's root folder (the folder that contains README.md, ml_model and "
-            "drowsiness_detection_webapp):")
-    code(d, 'cd "path/to/DRIVER DROWSINESS DETECTION"')
+    d.add_heading("Step 2: Get the project and open its folder", level=2)
+    para(d, "Download the code from GitHub (needs Git; you must have access to the repository):")
+    code(d, "git clone https://github.com/DoshikRahul/driver-drowsiness-detection.git\n"
+            "cd driver-drowsiness-detection")
+    para(d, "If you already have a copy of the folder, just move into it instead (the folder that contains "
+            "README.md, ml_model and drowsiness_detection_webapp). The repository includes the trained models; "
+            "the training dataset (~1.3 GB) is not included and is only needed to retrain (section 9).")
 
     d.add_heading("Step 3: Create and activate a virtual environment", level=2)
     para(d, "A virtual environment keeps this project's packages separate from the rest of the system.")
@@ -683,6 +688,14 @@ def build_execution():
         ["Maximum upload size", "`drowsiness_detection_web/settings.py`", "10 MB"],
     ], [4.4, 8.6, 3.6])
     para(d, "Restart the server after changing Python settings. Refresh the browser after changing live.html.")
+    para(d, "", "Environment variables (needed only when the app is used beyond your own computer):")
+    table(d, ["Variable", "Default", "Purpose"], [
+        ["`DJANGO_SECRET_KEY`", "a development key", "Must be set to a long random secret when deployed"],
+        ["`DJANGO_DEBUG`", "`1`", "Set to `0` in production to hide error details"],
+        ["`DJANGO_ALLOWED_HOSTS`", "empty (localhost only)", "Comma-separated host names the server answers to"],
+    ], [4.8, 4.0, 7.8])
+    para(d, "Example (Linux/macOS): `export DJANGO_SECRET_KEY='long-random-text' DJANGO_DEBUG=0 "
+            "DJANGO_ALLOWED_HOSTS=myhost.example`")
 
     d.add_heading("11. Troubleshooting", level=1)
     table(d, ["Problem", "Cause / Solution"], [
