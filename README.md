@@ -7,7 +7,7 @@ It finds the driver's face with **MediaPipe Face Landmarker** (478 landmarks + 5
 
 | Signal | How | Drowsy when |
 |---|---|---|
-| **Eye Aspect Ratio (EAR)** | `(|p2−p6| + |p3−p5|) / (2·|p1−p4|)` over 6 eye landmarks, fused with the `eyeBlink` blendshape | EAR < 0.21 (or calibrated) / blink > 0.5 |
+| **Eye Aspect Ratio (EAR)** | `(\|p2−p6\| + \|p3−p5\|) / (2·\|p1−p4\|)` over 6 eye landmarks, fused with the `eyeBlink` blendshape | EAR < 0.21 (or calibrated) / blink > 0.5 |
 | **Mouth Aspect Ratio (MAR)** | inner-lip opening ÷ mouth width, fused with the `jawOpen` blendshape | MAR > 0.60 / jawOpen > 0.5 → yawning |
 | **Head pitch** | from the 3-D facial transformation matrix | pitched down > 20° → nodding |
 
